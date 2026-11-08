@@ -7,9 +7,9 @@ Let your AI agent pay for things. Never let it get tricked into paying.
 
 ## 🎬 Demo video
 
-[![Watch the IntentGuard demo (1:57)](docs/demo-thumbnail.jpg)](docs/intentguard-demo.mp4)
+[![Watch the IntentGuard demo (1:57)](docs/demo-thumbnail.jpg)](https://youtu.be/nBtEc1TZtzU)
 
-▶️ **[Watch the 2-minute demo](docs/intentguard-demo.mp4)**: the problem, why today's fixes fall short, how IntentGuard works, and a live devnet run where a prompt-injection attack gets blocked.
+▶️ **[Watch the 2-minute demo on YouTube](https://youtu.be/nBtEc1TZtzU)** (or [download the MP4](docs/intentguard-demo.mp4)): the problem, why today's fixes fall short, how IntentGuard works, and a live devnet run where a prompt-injection attack gets blocked.
 
 ---
 
