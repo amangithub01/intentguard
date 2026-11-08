@@ -18,6 +18,9 @@ const CHAIN = `solana:${CLUSTER}` as const;
 const BURNER_KEY = 'intentguard-demo-wallet';
 
 type ConnectFeature = { connect: () => Promise<{ accounts: readonly WalletAccount[] }> };
+type SignMessageFeature = {
+    signMessage: (...inputs: { account: WalletAccount; message: Uint8Array }[]) => Promise<{ signedMessage: Uint8Array; signature: Uint8Array }[]>;
+};
 type SignAndSendFeature = {
     signAndSendTransaction: (...inputs: { account: WalletAccount; chain: string; transaction: Uint8Array }[]) => Promise<{ signature: Uint8Array }[]>;
 };
@@ -71,6 +74,30 @@ export function useWallet() {
         return signer.address as string;
     }, []);
 
+    /** Sign-In With Solana: connect, then sign a human-readable message that the server verifies. */
+    const signIn = useCallback(async (w: Wallet) => {
+        const { accounts } = await (w.features['standard:connect'] as ConnectFeature).connect();
+        const acct = accounts[0] ?? w.accounts[0];
+        if (!acct) throw new Error('Wallet returned no accounts');
+        const feature = w.features['solana:signMessage'] as SignMessageFeature | undefined;
+        if (!feature) throw new Error(`${w.name} cannot sign messages`);
+        const message = [
+            'IntentGuard wants you to sign in with your Solana account:',
+            acct.address,
+            '',
+            'This proves you own this wallet. It costs nothing and does not move funds.',
+            '',
+            `URI: ${location.origin}`,
+            `Issued At: ${new Date().toISOString()}`,
+        ].join('\n');
+        const [out] = await feature.signMessage({ account: acct, message: new TextEncoder().encode(message) });
+        setBurner(null);
+        setWallet(w);
+        setAccount(acct);
+        const signature = btoa(String.fromCharCode(...out.signature));
+        return { address: acct.address, message, signature };
+    }, []);
+
     /** Signs and sends a base64 wire transaction built by the server; returns the base58 signature. */
     const signAndSend = useCallback(
         async (txBase64: string) => {
@@ -101,6 +128,7 @@ export function useWallet() {
         address: burner?.address ?? account?.address ?? null,
         connect,
         connectBurner,
+        signIn,
         signAndSend,
     };
 }

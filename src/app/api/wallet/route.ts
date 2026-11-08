@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { address } from '@solana/kit';
+import { address, getBase64Encoder, getPublicKeyFromAddress, verifySignature, type SignatureBytes } from '@solana/kit';
 import { z } from 'zod';
 import { buildFundAgentTx, buildRevokeTx, buildSetupTx, faucet, readDelegation, relaySigned, waitForConfirmation } from '@/lib/solana';
 import { addActivity, readState, updateState } from '@/lib/store';
@@ -7,6 +7,7 @@ import { addActivity, readState, updateState } from '@/lib/store';
 
 const Body = z.discriminatedUnion('action', [
     z.object({ action: z.literal('connect'), owner: z.string() }),
+    z.object({ action: z.literal('sign-in'), owner: z.string(), message: z.string().max(600), signature: z.string() }),
     z.object({ action: z.literal('fund-agent-tx'), owner: z.string(), sol: z.number().positive().max(2).default(0.2) }),
     z.object({ action: z.literal('faucet'), owner: z.string(), amount: z.number().positive().max(1000).default(100) }),
     z.object({ action: z.literal('setup-tx'), owner: z.string(), amount: z.number().positive(), expiryHours: z.number().positive().default(24) }),
@@ -31,6 +32,28 @@ export async function POST(req: Request) {
                     }
                 });
                 return NextResponse.json({ ok: true });
+            }
+            case 'sign-in': {
+                // Sign-In With Solana: the wallet signs a short message, no password involved.
+                const owner = address(body.owner);
+                const issued = Date.parse(body.message.match(/Issued At: (.+)/)?.[1] ?? '');
+                if (!body.message.includes(owner) || !body.message.startsWith('IntentGuard wants you to sign in'))
+                    return NextResponse.json({ error: 'Sign-in message does not match this wallet' }, { status: 400 });
+                if (!(Math.abs(Date.now() - issued) < 5 * 60_000)) return NextResponse.json({ error: 'Sign-in message expired, try again' }, { status: 400 });
+                const ok = await verifySignature(
+                    await getPublicKeyFromAddress(owner),
+                    new Uint8Array(getBase64Encoder().encode(body.signature)) as SignatureBytes,
+                    new TextEncoder().encode(body.message),
+                );
+                if (!ok) return NextResponse.json({ error: 'Signature check failed' }, { status: 401 });
+                updateState(s => {
+                    if (s.owner !== owner) {
+                        s.owner = owner;
+                        s.delegation = null;
+                        s.spent = 0;
+                    }
+                });
+                return NextResponse.json({ ok: true, owner });
             }
             case 'fund-agent-tx':
                 return NextResponse.json({ tx: await buildFundAgentTx(address(body.owner), body.sol) });
