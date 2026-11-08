@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { address } from '@solana/kit';
 import { z } from 'zod';
-import { buildFundAgentTx, buildRevokeTx, buildSetupTx, faucet, readDelegation, waitForConfirmation } from '@/lib/solana';
+import { buildFundAgentTx, buildRevokeTx, buildSetupTx, faucet, readDelegation, relaySigned, waitForConfirmation } from '@/lib/solana';
 import { addActivity, readState, updateState } from '@/lib/store';
 
 
@@ -14,6 +14,7 @@ const Body = z.discriminatedUnion('action', [
     z.object({ action: z.literal('revoke-tx'), owner: z.string() }),
     z.object({ action: z.literal('revoke-confirmed'), signature: z.string() }),
     z.object({ action: z.literal('confirm'), signature: z.string() }),
+    z.object({ action: z.literal('relay'), tx: z.string().min(10) }),
 ]);
 
 export async function POST(req: Request) {
@@ -51,6 +52,8 @@ export async function POST(req: Request) {
                 addActivity({ kind: 'setup', title: `On-chain allowance of ${d.remaining} USDC granted to the agent`, signature: body.signature });
                 return NextResponse.json({ ok: true, allowance: d });
             }
+            case 'relay':
+                return NextResponse.json({ signature: await relaySigned(body.tx) });
             case 'confirm':
                 await waitForConfirmation(body.signature as Parameters<typeof waitForConfirmation>[0]);
                 return NextResponse.json({ ok: true });

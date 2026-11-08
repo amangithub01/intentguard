@@ -81,6 +81,16 @@ export async function sendAsServer(feePayer: KeyPairSigner, instructions: Instru
     return signature;
 }
 
+/** Forward a transaction the user already signed in the browser (demo wallet). */
+export async function relaySigned(wireBase64: string): Promise<Signature> {
+    try {
+        return await rpc.sendTransaction(wireBase64 as Parameters<typeof rpc.sendTransaction>[0], { encoding: 'base64', preflightCommitment: 'confirmed' }).send();
+    } catch (e) {
+        const cause = (e as { cause?: Error }).cause?.message;
+        throw new Error(cause ? `${(e as Error).message}: ${cause}` : (e as Error).message);
+    }
+}
+
 /** Build an unsigned transaction that the user's wallet will sign and send. */
 async function buildUserTx(feePayer: Address, instructions: Instruction[]): Promise<string> {
     const blockhash = await latestBlockhash();

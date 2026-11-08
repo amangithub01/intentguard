@@ -108,6 +108,12 @@ export default function Dashboard() {
             await post('/api/wallet', { action: 'connect', owner: addr });
         });
 
+    const connectBurner = () =>
+        run('connect', async () => {
+            const addr = await w.connectBurner();
+            await post('/api/wallet', { action: 'connect', owner: addr });
+        });
+
     const fundAgent = () =>
         run('fund', async () => {
             const { tx } = await post<{ tx: string }>('/api/wallet', { action: 'fund-agent-tx', owner, sol: 0.1 });
@@ -174,19 +180,29 @@ export default function Dashboard() {
                         <Badge tone={s?.llm ? 'ok' : 'warn'}>{s?.llm ? 'AI judge: on' : 'AI judge: rules-only'}</Badge>
                         {owner ? (
                             <Badge tone="ok">
-                                {short(owner)} · {s?.owner?.sol?.toFixed(3) ?? '–'} SOL · {s?.owner?.usdc ?? '–'} USDC
+                                {w.isBurner ? 'demo wallet ' : ''}{short(owner)} · {s?.owner?.sol?.toFixed(3) ?? '–'} SOL · {s?.owner?.usdc ?? '–'} USDC
                             </Badge>
                         ) : w.wallets.length ? (
-                            w.wallets.map(x => (
+                            [
+                                <button key="demo" onClick={connectBurner} className="rounded-lg border border-zinc-600 px-3 py-1.5 font-semibold text-zinc-200 hover:bg-zinc-800">
+                                    Use demo wallet
+                                </button>,
+                                ...w.wallets.map(x => (
                                 <button key={x.name} onClick={() => connect(x)} className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 font-semibold text-black hover:bg-zinc-200">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={x.icon} alt="" className="h-4 w-4" /> Connect {x.name}
                                 </button>
-                            ))
+                                )),
+                            ]
                         ) : (
-                            <a href="https://phantom.com/download" target="_blank" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-black">
-                                Install Phantom
-                            </a>
+<>
+                                <button onClick={connectBurner} className="rounded-lg border border-zinc-600 px-3 py-1.5 font-semibold text-zinc-200 hover:bg-zinc-800">
+                                    Use demo wallet
+                                </button>
+                                <a href="https://phantom.com/download" target="_blank" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-black">
+                                    Install Phantom
+                                </a>
+                            </>
                         )}
                     </div>
                 </header>
@@ -212,6 +228,15 @@ export default function Dashboard() {
                     <div className="space-y-5 lg:col-span-2">
                         <Card title="1 · Setup" subtitle="Three wallet actions, done once">
                             <SetupRow done={connected} label="Connect wallet" detail={connected ? short(owner) : 'Phantom on ' + (s?.cluster ?? 'devnet')} />
+                            {connected && w.isBurner && (s?.owner?.sol ?? 0) < 0.05 && (
+                                <div className="my-2 rounded-lg border border-amber-400/40 bg-amber-400/5 p-2 text-xs text-amber-200">
+                                    Demo wallet needs ~0.3 devnet SOL. Send it from Phantom (Send → paste) or faucet.solana.com to:
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <code className="break-all text-amber-100">{owner}</code>
+                                        <button className="underline" onClick={() => navigator.clipboard.writeText(owner!)}>copy</button>
+                                    </div>
+                                </div>
+                            )}
                             <SetupRow
                                 done={agentFunded}
                                 label="Fund agent gas"
