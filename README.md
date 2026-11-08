@@ -5,6 +5,12 @@ Let your AI agent pay for things. Never let it get tricked into paying.
 
 > Built for the MLH Solana Hackathon (AI track · DeFi track).
 
+## 🎬 Demo video
+
+[![Watch the IntentGuard demo (1:57)](docs/demo-thumbnail.jpg)](docs/intentguard-demo.mp4)
+
+▶️ **[Watch the 2-minute demo](docs/intentguard-demo.mp4)**: the problem, why today's fixes fall short, how IntentGuard works, and a live devnet run where a prompt-injection attack gets blocked.
+
 ---
 
 ## The problem
@@ -61,12 +67,15 @@ cp .env.example .env.local     # add an OpenAI-compatible key (Groq is free); le
 npm run dev                    # http://localhost:3000
 ```
 
-In the dashboard:
-1. **Connect Phantom.**
-2. **Fund agent gas** sends 0.1 devnet SOL to the agent key. The agent pays transaction fees and mints the demo stablecoin.
-3. **Mint 100** test USDC (a self-minted 6-decimal devnet token; set `DEMO_MINT` to use another mint, e.g. Circle's devnet USDC).
-4. **Grant** an on-chain allowance (e.g. 1 USDC, 24h). This takes two Phantom signatures the first time: init authority, then create allowance.
-5. **Set the task** and click the three scenario cards.
+Open the landing page and click **Sign in with Phantom**. There are no passwords: you sign a short message with your wallet (Sign-In With Solana), the server verifies the signature, and you land on `/dashboard`. *Just look around* opens a read-only view without a wallet.
+
+In the dashboard, follow the numbered timeline:
+1. **Setup**
+   - **Fund agent gas** sends 0.1 devnet SOL to the agent key. The agent pays transaction fees and mints the demo stablecoin.
+   - **Mint 100** test USDC (a self-minted 6-decimal devnet token; set `DEMO_MINT` to use another mint, e.g. Circle's devnet USDC).
+   - **Grant** an on-chain allowance (e.g. 1 USDC, 24h). This takes two Phantom signatures the first time: init authority, then create allowance.
+2. **Task:** describe the job in plain English and pick the approved payee. IntentGuard turns it into a policy.
+3. **Let the agent loose:** pick a scenario tab and press **Run**. An animated pipeline (AI agent → merchant → IntentGuard → Solana) plays each step with narration and ends with a **PAID / BLOCKED / NEEDS YOU** verdict. Every decision also appears in the live guard log with its reasons and risk score.
 
 ### Use it from a real AI agent (MCP)
 
@@ -111,8 +120,9 @@ app/
 ├─ src/lib/solana.ts      # @solana/kit v7 + @solana/subscriptions: allowance setup/revoke, agent pull, x402 payment verification
 ├─ src/lib/intent.ts      # intent → policy (LLM / regex), payment judge (rules + LLM judge + Prompt Guard)
 ├─ src/lib/guard.ts       # orchestration: judge → execute / review queue / block
-├─ src/app/api/           # wallet, intent, agent/pay, review, state, demo/weather (x402 merchant), demo/agent (simulator)
-├─ src/components/        # dashboard + Wallet Standard (Phantom) hook
+├─ src/app/api/           # wallet (incl. sign-in signature check), intent, agent/pay, review, state, demo/weather (x402 merchant), demo/agent (simulator)
+├─ src/components/        # landing page (three.js coin orbit), dashboard, agent stage, guard log,
+│                         #   Sign-In With Solana session + Wallet Standard (Phantom) hook
 └─ mcp/                   # MCP server + shared IntentGuard client
 ```
 
